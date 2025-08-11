@@ -13,6 +13,13 @@ h1.title {
     color: #2c3e50;
 }
 
+@font-face {
+    font-family: 'OpenDyslexic';
+    src: url('./fonts/OpenDyslexic-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+  }
+
 /* Layout */
 .container {
     display: flex;
@@ -133,4 +140,6 @@ textarea {
     background: #ffffff;
     color: #000000;
     overflow: auto;
+    font-family: Arial, sans-serif;
 }
+
