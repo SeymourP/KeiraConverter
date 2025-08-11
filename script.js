@@ -276,4 +276,13 @@ window.addEventListener('DOMContentLoaded', () => {
             output.innerText = "Your text will appear here...";
         }
     });
+    output.addEventListener('input', () => {
+        updateStylesAndSave();
+    });
+    output.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    document.execCommand('insertText', false, text);
+    updateStylesAndSave();
+    });
 });
