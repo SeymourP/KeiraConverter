@@ -3,34 +3,49 @@ function showSection(section) {
     document.getElementById(section).style.display = 'block';
 }
 
+// Main input section toggle
 function showInput(type, btn) {
-    const sections = ['text', 'url', 'pdf'];
+    const sections = ['text', 'url', 'pdf', 'typing'];
     sections.forEach(id => {
-        document.getElementById(id).style.display = (id === type) ? 'flex' : 'none';
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.display = (id === type) ? 'flex' : 'none';
     });
 
-    // Toggle active class
-    const buttons = document.querySelectorAll('.menuBtn');
-    buttons.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-}
+    document.querySelectorAll('.menuBtn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
 
-// Apply current settings to the output
-function updateStyles() {
     const output = document.getElementById('output');
-    output.style.fontFamily = document.getElementById('fontSelect').value;
-    output.style.fontSize = document.getElementById('fontSize').value + 'px';
-    output.style.lineHeight = document.getElementById('lineHeight').value;
-    output.style.color = document.getElementById('textColor').value;
-    output.style.backgroundColor = document.getElementById('bgColor').value;
-
-    const letterSpacingEl = document.getElementById('letterSpacing');
-    const wordSpacingEl = document.getElementById('wordSpacing');
-    if (letterSpacingEl) output.style.letterSpacing = letterSpacingEl.value + 'px';
-    if (wordSpacingEl) output.style.wordSpacing = wordSpacingEl.value + 'px';
+    if (type === 'typing') {
+        if (output) output.style.display = 'block';
+        newTypingPrompt();
+    } else {
+        disableOutputTyping();
+        if (output) {
+            if (!output.innerText.trim()) {
+                output.classList.add('placeholder');
+                output.innerText = "Your text will appear here...";
+            }
+        }
+    }
 }
 
-// Save preferences in localStorage
+// Apply current settings
+function updateStyles() {
+    ['output', 'typingPrompt'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.fontFamily = document.getElementById('fontSelect').value;
+        el.style.fontSize = document.getElementById('fontSize').value + 'px';
+        el.style.lineHeight = document.getElementById('lineHeight').value;
+        el.style.color = document.getElementById('textColor').value;
+        el.style.backgroundColor = document.getElementById('bgColor').value;
+        el.style.letterSpacing = document.getElementById('letterSpacing')?.value + 'px';
+        el.style.wordSpacing = document.getElementById('wordSpacing')?.value + 'px';
+    });
+}
+
+// Save preferences
 function savePreferences() {
     const prefs = {
         fontSelect: document.getElementById('fontSelect').value,
@@ -56,77 +71,36 @@ function loadPreferences() {
     updateStyles();
 }
 
-// Combined function for updating & saving
 function updateStylesAndSave() {
     updateStyles();
     savePreferences();
 }
 
-// Add listeners for style controls
 function setupStyleListeners() {
     const controls = [
         'fontSelect', 'fontSize', 'lineHeight',
         'textColor', 'bgColor', 'letterSpacing', 'wordSpacing'
     ];
-
     controls.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
-        if (el.type === 'color') {
-            el.addEventListener('input', updateStylesAndSave);
-        } else if (el.tagName === 'SELECT') {
-            el.addEventListener('change', updateStylesAndSave);
-        } else {
-            el.addEventListener('input', updateStylesAndSave);
-        }
+        el.addEventListener((el.type === 'color' || el.tagName !== 'SELECT') ? 'input' : 'change', updateStylesAndSave);
     });
 }
 
-// Download as PDF
-function downloadAsPDF() {
-    const element = document.getElementById('output');
-    const style = window.getComputedStyle(element);
-
-    const opt = {
-        margin: 0.5,
-        filename: 'Keira-Converter.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-            scale: 2,
-            backgroundColor: style.backgroundColor,
-            letterRendering: true,
-            useCORS: true
-        },
-        jsPDF: { unit: 'in', format: 'letter', putOnlyUsedFonts: true }
-    };
-
-    element.style.fontFamily = style.fontFamily;
-    element.style.fontSize = style.fontSize;
-    element.style.lineHeight = style.lineHeight;
-    element.style.color = style.color;
-    element.style.backgroundColor = style.backgroundColor;
-
-    html2pdf().set(opt).from(element).save();
-}
-
-// Fetch content from a URL
+// Fetch URL content
 async function fetchURL() {
     const url = document.getElementById('urlInput').value;
     const proxyURL = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-
     try {
         const response = await fetch(proxyURL);
         const data = await response.json();
-
         const parser = new DOMParser();
         const doc = parser.parseFromString(data.contents, "text/html");
-
         const article = doc.querySelector('article') || doc.body;
         let text = article.innerText || "Could not extract readable content.";
         text = text.replace(/\n\s*\n+/g, '\n\n');
-
-        const output = document.getElementById('output');
-        output.innerText = text;
+        document.getElementById('output').innerText = text;
         updateStylesAndSave();
     } catch (error) {
         document.getElementById('output').innerText = "Failed to fetch content. Please check the URL.";
@@ -134,115 +108,168 @@ async function fetchURL() {
     }
 }
 
-// Load PDF and extract text
+// PDF loader
 function loadPDF() {
-    const fileInput = document.getElementById('pdfInput');
-    const file = fileInput.files[0];
+    const file = document.getElementById('pdfInput').files[0];
     const output = document.getElementById('output');
-
     if (!file) {
         alert("Please select a PDF file.");
         return;
     }
-
     const reader = new FileReader();
-
     reader.onload = function () {
         const typedarray = new Uint8Array(reader.result);
-
-        pdfjsLib.getDocument({ data: typedarray }).promise
-            .then(function (pdf) {
-                let textPromises = [];
-
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    textPromises.push(
-                        pdf.getPage(i).then(page => {
-                            return page.getTextContent().then(content => {
-                                const strings = content.items.map(item => item.str);
-                                return strings.join(' ');
-                            });
-                        })
-                    );
-                }
-
-                Promise.all(textPromises).then(pagesText => {
-                    const fullText = pagesText.join('\n\n');
-                    output.innerText = fullText;
-                    updateStylesAndSave();
-                });
-            })
-            .catch(function (err) {
-                console.error("Error loading PDF:", err);
-                alert("Failed to read PDF.");
+        pdfjsLib.getDocument({ data: typedarray }).promise.then(pdf => {
+            let textPromises = [];
+            for (let i = 1; i <= pdf.numPages; i++) {
+                textPromises.push(pdf.getPage(i).then(page => page.getTextContent().then(content => content.items.map(item => item.str).join(' '))));
+            }
+            Promise.all(textPromises).then(pagesText => {
+                output.innerText = pagesText.join('\n\n');
+                updateStylesAndSave();
             });
+        }).catch(err => {
+            console.error("Error loading PDF:", err);
+            alert("Failed to read PDF.");
+        });
     };
-
-    reader.onerror = function (err) {
-        console.error("FileReader error:", err);
-        alert("Error reading file.");
-    };
-
     reader.readAsArrayBuffer(file);
 }
 
-// Read aloud function
+// Read aloud
 function readAloud() {
     const text = document.getElementById("output").innerText;
     if (!text.trim() || document.getElementById("output").classList.contains('placeholder')) {
         alert("No text to read!");
         return;
     }
-
-    // Stop any existing speech
     speechSynthesis.cancel();
-
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1;
     utterance.pitch = 1;
-
-    // Load available voices and pick a female one if possible
     const voices = speechSynthesis.getVoices();
-    const femaleVoice = voices.find(v =>
-        /female/i.test(v.name) || /woman/i.test(v.name) || /zira/i.test(v.name) || /susan/i.test(v.name)
-    );
-    if (femaleVoice) {
-        utterance.voice = femaleVoice;
-    }
-
+    const femaleVoice = voices.find(v => /female|woman|zira|susan/i.test(v.name));
+    if (femaleVoice) utterance.voice = femaleVoice;
     speechSynthesis.speak(utterance);
 }
+speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+function stopReadAloud() { speechSynthesis.cancel(); }
 
-// Ensure voices are loaded before first use
-speechSynthesis.onvoiceschanged = () => {
-    speechSynthesis.getVoices();
-};
+// Random word/paragraph generation
+function getRandomWords(count = 10) {
+    const letters = "abcdefghijklmnopqrstuvwxyz";
+    const words = [];
+    for (let i = 0; i < count; i++) {
+        let word = "";
+        const len = Math.floor(Math.random() * 6) + 3;
+        for (let j = 0; j < len; j++) {
+            word += letters.charAt(Math.floor(Math.random() * letters.length));
+        }
+        words.push(word);
+    }
+    return words.join(' ');
+}
+async function getRandomParagraph() {
+    try {
+        const apiURL = "https://api.quotable.io/random?minLength=100&maxLength=200";
+        const proxyURL = `https://api.allorigins.win/get?url=${encodeURIComponent(apiURL)}`;
 
-// Stop reading function
-function stopReadAloud() {
-    speechSynthesis.cancel();
+        const response = await fetch(proxyURL);
+        const data = await response.json();
+
+        // The actual API's JSON is inside data.contents
+        const quoteData = JSON.parse(data.contents);
+
+        // Take only first 15 words
+        let words = quoteData.content.split(/\s+/).slice(0, 15).join(" ");
+        return words;
+    } catch (error) {
+        console.error("Failed to fetch paragraph:", error);
+        return "The quick brown fox jumps over the lazy dog and keeps running very fast.";
+    }
 }
 
-// Init on page load
+// Typing prompt system
+let typingPromptText = "";
+async function newTypingPrompt() {
+    const mode = document.getElementById('typingMode')?.value || 'words';
+
+    if (mode === 'paragraph') {
+        typingPromptText = await getRandomParagraph(); // now async
+    } else {
+        typingPromptText = getRandomWords(10);
+    }
+
+    document.getElementById('typingPrompt').innerHTML = escapeHTML(typingPromptText);
+    document.getElementById('typingFeedback').innerText = "";
+
+    const output = document.getElementById('output');
+    output.innerText = "";
+    output.contentEditable = "true";
+    output.setAttribute('spellcheck', 'false');
+    output.classList.remove('placeholder');
+    output.focus();
+
+    updateStyles();
+    enableOutputTyping();
+}
+function escapeHTML(str) {
+    return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+function typingInputHandler(e) {
+    const typed = (e.currentTarget.innerText || "").replace(/\n/g, '');
+    const prompt = typingPromptText || "";
+    const feedbackEl = document.getElementById('typingFeedback');
+    const promptEl = document.getElementById('typingPrompt');
+    let html = "";
+    for (let i = 0; i < prompt.length; i++) {
+        if (i < typed.length) {
+            html += `<span style="color:${typed[i] === prompt[i] ? 'green' : 'red'};">${escapeHTML(prompt[i])}</span>`;
+        } else {
+            html += `<span>${escapeHTML(prompt[i])}</span>`;
+        }
+    }
+    promptEl.innerHTML = html;
+    if (typed.length === prompt.length && typed === prompt) {
+        feedbackEl.innerText = "✅ Completed!";
+        setTimeout(newTypingPrompt, 1000); // auto-generate new prompt after completion
+    } else if (typed.length === 0) {
+        feedbackEl.innerText = "";
+    } else if (typed.length > prompt.length) {
+        feedbackEl.innerText = "You typed more than required.";
+    } else {
+        const correctSoFar = typed.split("").filter((ch, i) => ch === prompt[i]).length;
+        feedbackEl.innerText = `${correctSoFar}/${prompt.length} correct so far.`;
+    }
+}
+function enableOutputTyping() {
+    const output = document.getElementById('output');
+    if (!output) return;
+    output.removeEventListener('input', typingInputHandler);
+    output.addEventListener('input', typingInputHandler);
+}
+function disableOutputTyping() {
+    const output = document.getElementById('output');
+    if (!output) return;
+    output.removeEventListener('input', typingInputHandler);
+}
+
+// Init
 window.addEventListener('DOMContentLoaded', () => {
     loadPreferences();
     setupStyleListeners();
     updateStyles();
-
     const output = document.getElementById('output');
-
-    // Placeholder behavior
     if (!output.innerText.trim()) {
         output.classList.add('placeholder');
         output.innerText = "Your text will appear here...";
     }
-
     output.addEventListener('focus', () => {
         if (output.classList.contains('placeholder')) {
             output.innerText = "";
             output.classList.remove('placeholder');
         }
     });
-
     output.addEventListener('blur', () => {
         if (!output.innerText.trim()) {
             output.classList.add('placeholder');

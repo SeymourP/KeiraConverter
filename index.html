@@ -14,6 +14,7 @@
             <button class="menuBtn active" onclick="showInput('text', this)">Text Editor</button>
             <button class="menuBtn" onclick="showInput('url', this)">Paste URL</button>
             <button class="menuBtn" onclick="showInput('pdf', this)">Load PDF</button>
+            <button class="menuBtn" onclick="showInput('typing', this)">Typing Practice</button>
         </div>
 
         <!-- Main Content -->
@@ -32,6 +33,20 @@
                     <h2>Load PDF</h2>
                     <input type="file" id="pdfInput" accept="application/pdf">
                     <button class="actionBtn" onclick="loadPDF()">Extract Text</button>
+                </div>
+                <div id="typing" class="inputBox" style="display:none; flex-direction:column; gap:12px;">
+                    <h2>Typing Practice</h2>
+                      <label>
+                        <select id="typingMode">
+                            <option value="paragraph">Paragraph</option>
+                            <option value="words">Random Letters</option>
+                        </select>
+                    </label>
+                    <div id="typingPrompt" style="padding:12px; border:1px solid #ccc; border-radius:6px; min-height:60px;"></div>
+                    <div>
+                        <button class="actionBtn" onclick="newTypingPrompt()">New Prompt</button>
+                    </div>
+                    <div id="typingFeedback" style="font-size:14px; color:#c0392b;"></div>
                 </div>
             </div>
 
