@@ -3,13 +3,6 @@ function showSection(section) {
     document.getElementById(section).style.display = 'block';
 }
 
-function loadText() {
-    const text = document.getElementById('textInput').value;
-    const output = document.getElementById('output');
-    output.innerText = text;
-    updateStylesAndSave();
-}
-
 function showInput(type, btn) {
     const sections = ['text', 'url', 'pdf'];
     sections.forEach(id => {
@@ -195,15 +188,34 @@ function loadPDF() {
 // Read aloud function
 function readAloud() {
     const text = document.getElementById("output").innerText;
-    if (!text.trim()) {
+    if (!text.trim() || document.getElementById("output").classList.contains('placeholder')) {
         alert("No text to read!");
         return;
     }
+
+    // Stop any existing speech
+    speechSynthesis.cancel();
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1;
     utterance.pitch = 1;
+
+    // Load available voices and pick a female one if possible
+    const voices = speechSynthesis.getVoices();
+    const femaleVoice = voices.find(v =>
+        /female/i.test(v.name) || /woman/i.test(v.name) || /zira/i.test(v.name) || /susan/i.test(v.name)
+    );
+    if (femaleVoice) {
+        utterance.voice = femaleVoice;
+    }
+
     speechSynthesis.speak(utterance);
 }
+
+// Ensure voices are loaded before first use
+speechSynthesis.onvoiceschanged = () => {
+    speechSynthesis.getVoices();
+};
 
 // Stop reading function
 function stopReadAloud() {
@@ -215,4 +227,26 @@ window.addEventListener('DOMContentLoaded', () => {
     loadPreferences();
     setupStyleListeners();
     updateStyles();
+
+    const output = document.getElementById('output');
+
+    // Placeholder behavior
+    if (!output.innerText.trim()) {
+        output.classList.add('placeholder');
+        output.innerText = "Your text will appear here...";
+    }
+
+    output.addEventListener('focus', () => {
+        if (output.classList.contains('placeholder')) {
+            output.innerText = "";
+            output.classList.remove('placeholder');
+        }
+    });
+
+    output.addEventListener('blur', () => {
+        if (!output.innerText.trim()) {
+            output.classList.add('placeholder');
+            output.innerText = "Your text will appear here...";
+        }
+    });
 });

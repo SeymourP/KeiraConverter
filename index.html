@@ -11,7 +11,7 @@
     <div class="container">
         <!-- Sidebar Menu -->
         <div class="sidebar">
-            <button class="menuBtn active" onclick="showInput('text', this)">Paste Text</button>
+            <button class="menuBtn active" onclick="showInput('text', this)">Text Editor</button>
             <button class="menuBtn" onclick="showInput('url', this)">Paste URL</button>
             <button class="menuBtn" onclick="showInput('pdf', this)">Load PDF</button>
         </div>
@@ -21,9 +21,7 @@
             <!-- Input Boxes -->
             <div class="inputContainer">
                 <div id="text" class="inputBox">
-                    <h2>Paste Text</h2>
-                    <textarea id="textInput" placeholder="Paste your text here..."></textarea>
-                    <button class="actionBtn" onclick="loadText()">Load Text</button>
+                    <h2>Text Editor</h2>
                 </div>
                 <div id="url" class="inputBox" style="display: none;">
                     <h2>Paste URL</h2>
@@ -65,11 +63,14 @@
                     <input type="color" id="bgColor" value="#ffffff">
                 </label>
             </div>
-            <button class="actionBtn" onclick="readAloud()">Read Aloud</button>
-            <button class="actionBtn" onclick="stopReadAloud()">Stop Reading</button>
-            <!-- Output and Download -->
-            <div id="output" contenteditable="true">Your text will appear here...</div>
+            <div id="read">
+                <button class="actionBtn" onclick="readAloud()">Read Aloud</button>
+                <button class="actionBtn" onclick="stopReadAloud()">Stop Reading</button>
+            </div>
             <button class="actionBtn" onclick="downloadAsPDF()">Download as PDF</button>
+            <!-- Output and Download -->
+            <div id="output" contenteditable="true"></div>
+            
         </div>
     </div>
     
